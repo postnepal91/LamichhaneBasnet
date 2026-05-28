@@ -1,0 +1,42 @@
+{
+  "ne": {
+    "navOrigin": "उत्पत्ति",
+    "navHistory": "इतिहास",
+    "navMasto": "मस्तो/कुलपूजा",
+    "navGenealogy": "वंशावली",
+    "navArchive": "अभिलेखागार",
+    "navCommunity": "समुदाय",
+    "heroEyebrow": "गर्ग ऋषि वंश, वीर इतिहास र जीवित परम्पराहरू",
+    "heroTitle": "लमिछाने बस्नेत",
+    "heroDesc": "उत्पत्ति, मस्तो परम्परा, कुलपूजा, वंशावली र नेपाली सांस्कृतिक सम्पदाको सार्वजनिक डिजिटल अभिलेख। यो सामग्री उपलब्ध गराइएका ऐतिहासिक पाठहरूको आधारमा पुन:निर्मित गरिएको हो।",
+    "btnRead": "पुस्तक पढ्नुहोस्",
+    "btnJoin": "सदस्य बन्नुहोस्",
+    "btnContribute": "इतिहास योगदान गर्नुहोस्",
+    "labelName": "पूरा नाम",
+    "labelEmail": "इमेल",
+    "labelPassword": "पासवर्ड",
+    "labelBranch": "वंश शाखा",
+    "btnSubmit": "बुझाउनुहोस् / अगाडि बढ्नुहोस्",
+    "headTitle": "लमिछाने बस्नेत | इतिहास, कुलपूजा र सम्पदा"
+  },
+  "en": {
+    "navOrigin": "Origin",
+    "navHistory": "History",
+    "navMasto": "Masto/Kulpuja",
+    "navGenealogy": "Genealogy",
+    "navArchive": "Archive",
+    "navCommunity": "Community",
+    "heroEyebrow": "Garga Rishi Lineage, Heroic History & Living Traditions",
+    "heroTitle": "Lamichhane Basnet",
+    "heroDesc": "Public digital archive of origin, Masto tradition, Kulpuja, genealogy, and Nepalese cultural heritage. This content is reconstructed based on the historical texts provided.",
+    "btnRead": "Read Book",
+    "btnJoin": "Become a Member",
+    "btnContribute": "Contribute History",
+    "labelName": "Full Name",
+    "labelEmail": "Email",
+    "labelPassword": "Password",
+    "labelBranch": "Lineage Branch",
+    "btnSubmit": "Submit / Continue",
+    "headTitle": "Lamichhane Basnet | History, Kulpuja & Heritage"
+  }
+}

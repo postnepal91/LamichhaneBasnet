@@ -1,0 +1,14 @@
+{
+  "continue.models": [
+    {
+      "title": "Qwen Coder 14B",
+      "provider": "ollama",
+      "model": "qwen2.5-coder:14b"
+    }
+  ],
+  "files.encoding": "utf8",
+  "files.autoGuessEncoding": false,
+  "files.eol": "\n"
+}
+
+ 

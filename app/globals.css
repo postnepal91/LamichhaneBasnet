@@ -1,0 +1,1 @@
+:root { --gold: #c9a84c; --gold2: #e8c97a; --maroon: #6b1a2a; --dark: #10090a; --dark2: #1a100c; --ink: #f4ead2; --muted: #b29a76; --line: rgba(201, 168, 76, 0.28); --panel: rgba(255, 255, 255, 0.045); --ok: #92d18b; --bad: #ff9a9a; } body { background-color: var(--dark); color: var(--ink); font-family: " Noto Sans Devanagari\, system-ui, sans-serif; }
