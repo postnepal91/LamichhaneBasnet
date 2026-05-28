@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { send, checkMethod, readBody, requireAdmin, required } from '@/lib/shared';
 import { connectToDatabase } from '@/lib/db';
 import { ObjectId } from 'mongodb';
+import { logAction } from '@/lib/audit';
 
 export async function POST(req: NextRequest) {
   const methodCheck = checkMethod(req, ['POST']);
@@ -26,7 +27,8 @@ export async function POST(req: NextRequest) {
           db.collection('archives').countDocuments(),
         ]);
         const pendingContributions = await db.collection('contributions').countDocuments({ status: 'pending' });
-        return send(200, { users, contacts, contributions, archives, pendingContributions });
+        await logAction(auth.payload!.email, 'stats', { users, contacts, contributions, archives, pendingContributions });
+      return send(200, { users, contacts, contributions, archives, pendingContributions });
       }
 
       // --- List all users ---
@@ -36,7 +38,8 @@ export async function POST(req: NextRequest) {
           .sort({ createdAt: -1 })
           .limit(100)
           .toArray();
-        return send(200, { users });
+        await logAction(auth.payload!.email, 'list_users', { count: users.length });
+      return send(200, { users });
       }
 
       // --- Promote/demote user role ---
@@ -44,7 +47,8 @@ export async function POST(req: NextRequest) {
         const targetEmail = required(body.email, 'इमेल');
         const role = body.role === 'admin' ? 'admin' : 'member';
         await db.collection('users').updateOne({ email: targetEmail }, { $set: { role } });
-        return send(200, { message: `${targetEmail} को भूमिका ${role} मा परिवर्तन भयो।` });
+        await logAction(auth.payload!.email, 'set_role', { targetEmail, role });
+      return send(200, { message: `${targetEmail} को भूमिका ${role} मा परिवर्तन भयो।` });
       }
 
       // --- List contact submissions ---
@@ -54,7 +58,8 @@ export async function POST(req: NextRequest) {
           .sort({ createdAt: -1 })
           .limit(100)
           .toArray();
-        return send(200, { contacts });
+        await logAction(auth.payload!.email, 'list_contacts', { count: contacts.length });
+      return send(200, { contacts });
       }
 
       // --- List contributions with filter ---
@@ -65,7 +70,8 @@ export async function POST(req: NextRequest) {
           .sort({ createdAt: -1 })
           .limit(100)
           .toArray();
-        return send(200, { contributions });
+        await logAction(auth.payload!.email, 'list_contributions', { count: contributions.length, filter: body.status || null });
+      return send(200, { contributions });
       }
 
       // --- Approve or reject a contribution ---
@@ -76,7 +82,8 @@ export async function POST(req: NextRequest) {
           { submissionId: contribId },
           { $set: { status, reviewedBy: auth.payload!.email, reviewedAt: new Date() } }
         );
-        return send(200, { message: `कथाको स्थिति "${status}" मा परिवर्तन भयो।` });
+        await logAction(auth.payload!.email, 'review_contribution', { contribId, status });
+      return send(200, { message: `कथाको स्थिति "${status}" मा परिवर्तन भयो।` });
       }
 
       // --- Delete a user ---
@@ -84,7 +91,8 @@ export async function POST(req: NextRequest) {
         const targetEmail = required(body.email, 'इमेल');
         if (targetEmail === auth.payload!.email) throw new Error('आफ्नै खाता मेटाउन मिल्दैन।');
         await db.collection('users').deleteOne({ email: targetEmail });
-        return send(200, { message: `${targetEmail} मेटाइयो।` });
+        await logAction(auth.payload!.email, 'delete_user', { targetEmail });
+      return send(200, { message: `${targetEmail} मेटाइयो।` });
       }
 
       default:
