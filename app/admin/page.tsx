@@ -1,13 +1,55 @@
 'use client';
 import { useState, useEffect } from 'react';
 
-const api = async (action: string, extra: any = {}, tokenStr: string) => {
+type AdminUser = {
+  _id: string;
+  name: string;
+  email: string;
+  role: string;
+  branch?: string;
+  authProvider?: string;
+  createdAt?: string;
+};
+
+type Contact = {
+  _id: string;
+  name: string;
+  email: string;
+  purpose: string;
+  message: string;
+  createdAt?: string;
+};
+
+type Contribution = {
+  _id: string;
+  title: string;
+  status: string;
+  category: string;
+  submissionId: string;
+  story: string;
+  submittedBy: string;
+  createdAt?: string;
+};
+
+type AdminResponse = {
+  error?: string;
+  message?: string;
+  users?: number | AdminUser[];
+  contacts?: number | Contact[];
+  contributions?: number | Contribution[];
+  archives?: number;
+  pendingContributions?: number;
+};
+
+const errorMessage = (error: unknown) => error instanceof Error ? error.message : 'Request failed';
+
+const api = async (action: string, extra: Record<string, unknown> = {}, tokenStr: string): Promise<AdminResponse> => {
   const res = await fetch('/api/admin', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tokenStr}` },
     body: JSON.stringify({ action, ...extra }),
   });
-  const json = await res.json();
+  const json: AdminResponse = await res.json();
   if (!res.ok) throw new Error(json.error || 'Request failed');
   return json;
 };
@@ -16,7 +58,7 @@ export default function AdminPage() {
   const [token, setToken] = useState('');
   const [inputToken, setInputToken] = useState('');
   const [tab, setTab] = useState<'stats'|'users'|'contacts'|'contributions'>('stats');
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<AdminResponse | null>(null);
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -36,28 +78,38 @@ export default function AdminPage() {
       else if (tabName === 'users') result = await api('list_users', {}, tok);
       else if (tabName === 'contacts') result = await api('list_contacts', {}, tok);
       else if (tabName === 'contributions') result = await api('list_contributions', {}, tok);
-      setData(result);
-    } catch (e: any) { setError(e.message); }
+      setData(result ?? null);
+    } catch (e: unknown) { setError(errorMessage(e)); }
     setLoading(false);
   };
 
   const setRole = async (email: string, role: string) => {
-    try { const r = await api('set_role', { email, role }, token); setMsg(r.message); load(); } 
-    catch (e: any) { setError(e.message); }
+    try { const r = await api('set_role', { email, role }, token); setMsg(r.message || ''); load(); }
+    catch (e: unknown) { setError(errorMessage(e)); }
   };
 
   const reviewContrib = async (submissionId: string, status: string) => {
-    try { const r = await api('review_contribution', { submissionId, status }, token); setMsg(r.message); load(); }
-    catch (e: any) { setError(e.message); }
+    try { const r = await api('review_contribution', { submissionId, status }, token); setMsg(r.message || ''); load(); }
+    catch (e: unknown) { setError(errorMessage(e)); }
   };
 
   const deleteUser = async (email: string) => {
     if (!confirm(`Delete ${email}?`)) return;
-    try { const r = await api('delete_user', { email }, token); setMsg(r.message); load(); }
-    catch (e: any) { setError(e.message); }
+    try { const r = await api('delete_user', { email }, token); setMsg(r.message || ''); load(); }
+    catch (e: unknown) { setError(errorMessage(e)); }
   };
 
   const handleTab = (t: typeof tab) => { setTab(t); setData(null); load(t); };
+  const users = Array.isArray(data?.users) ? data.users : [];
+  const contacts = Array.isArray(data?.contacts) ? data.contacts : [];
+  const contributions = Array.isArray(data?.contributions) ? data.contributions : [];
+  const statCards: [string, number | undefined][] = [
+    ['Users', typeof data?.users === 'number' ? data.users : undefined],
+    ['Contacts', typeof data?.contacts === 'number' ? data.contacts : undefined],
+    ['Stories', typeof data?.contributions === 'number' ? data.contributions : undefined],
+    ['Archive', data?.archives],
+    ['Pending', data?.pendingContributions],
+  ];
 
   const s = {
     page: { minHeight:'100vh', background:'#10090a', color:'#f4ead2', fontFamily:'system-ui,sans-serif', padding:'1.5rem' } as React.CSSProperties,
@@ -108,17 +160,17 @@ export default function AdminPage() {
       {/* STATS */}
       {tab==='stats' && data && (
         <div style={s.grid4}>
-          {[['Users',data.users],['Contacts',data.contacts],['Stories',data.contributions],['Archive',data.archives],['Pending',data.pendingContributions]].map(([label,val])=>(
-            <div key={label as string} style={{...s.card,...s.stat}}>
-              <span style={s.statNum}>{val}</span>
-              <span style={{color:'#b29a76',fontSize:'.85rem'}}>{label as string}</span>
+          {statCards.map(([label,val])=>(
+            <div key={label} style={{...s.card,...s.stat}}>
+              <span style={s.statNum}>{val ?? 0}</span>
+              <span style={{color:'#b29a76',fontSize:'.85rem'}}>{label}</span>
             </div>
           ))}
         </div>
       )}
 
       {/* USERS */}
-      {tab==='users' && data?.users && data.users.map((u:any) => (
+      {tab==='users' && users.map((u) => (
         <div key={u._id} style={s.card}>
           <div style={{display:'flex',justifyContent:'space-between',flexWrap:'wrap',gap:'.5rem'}}>
             <div>
@@ -139,7 +191,7 @@ export default function AdminPage() {
       ))}
 
       {/* CONTACTS */}
-      {tab==='contacts' && data?.contacts && data.contacts.map((c:any) => (
+      {tab==='contacts' && contacts.map((c) => (
         <div key={c._id} style={s.card}>
           <div style={{display:'flex',justifyContent:'space-between'}}>
             <strong>{c.name}</strong>
@@ -151,7 +203,7 @@ export default function AdminPage() {
       ))}
 
       {/* CONTRIBUTIONS */}
-      {tab==='contributions' && data?.contributions && (
+      {tab==='contributions' && (
         <>
           <div style={{display:'flex',gap:'.5rem',marginBottom:'1rem'}}>
             {['all','pending','approved','rejected'].map(s2=>(
@@ -160,7 +212,7 @@ export default function AdminPage() {
               </button>
             ))}
           </div>
-          {data.contributions.map((c:any) => (
+          {contributions.map((c) => (
             <div key={c._id} style={s.card}>
               <div style={{display:'flex',justifyContent:'space-between',flexWrap:'wrap',gap:'.5rem'}}>
                 <div>

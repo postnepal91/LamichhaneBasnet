@@ -3,7 +3,13 @@ import crypto from 'crypto';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_for_local_dev_123!';
 
-export function send(status: number, data: any) {
+type JwtPayload = Record<string, unknown> & {
+  exp?: number;
+  email?: string;
+  role?: string;
+};
+
+export function send(status: number, data: unknown) {
   return NextResponse.json(data, { status });
 }
 
@@ -18,20 +24,24 @@ export async function readBody(req: NextRequest) {
   try {
     const text = await req.text();
     if (!text) return {};
-    return JSON.parse(text);
+    const body: unknown = JSON.parse(text);
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+      throw new Error('JSON अनुरोध अमान्य छ।');
+    }
+    return body as Record<string, unknown>;
   } catch {
     throw new Error('JSON अनुरोध अमान्य छ।');
   }
 }
 
-export function required(value: any, label: string) {
+export function required(value: unknown, label: string) {
   if (!value || String(value).trim().length === 0) {
     throw new Error(`${label} आवश्यक छ।`);
   }
   return String(value).trim();
 }
 
-export function email(value: any) {
+export function email(value: unknown) {
   const clean = required(value, 'इमेल').toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) {
     throw new Error('कृपया सही इमेल राख्नुहोस्।');
@@ -43,7 +53,7 @@ export function id(prefix: string) {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export function token(payload: any) {
+export function token(payload: Record<string, unknown>) {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
   // Include exp: 7 days from now
   const body = Buffer.from(JSON.stringify({
@@ -57,7 +67,7 @@ export function token(payload: any) {
   return `${header}.${body}.${signature}`;
 }
 
-export function verifyToken(tokenStr: string): any | null {
+export function verifyToken(tokenStr: string): JwtPayload | null {
   try {
     const parts = tokenStr.split('.');
     if (parts.length !== 3) return null;
@@ -66,16 +76,18 @@ export function verifyToken(tokenStr: string): any | null {
       .update(`${header}.${body}`)
       .digest('base64url');
     if (signature !== expectedSignature) return null;
-    const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
+    const payload: unknown = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
+    if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) return null;
     // Check expiry
-    if (payload.exp && Math.floor(Date.now() / 1000) > payload.exp) return null;
-    return payload;
+    const jwtPayload = payload as JwtPayload;
+    if (jwtPayload.exp && Math.floor(Date.now() / 1000) > jwtPayload.exp) return null;
+    return jwtPayload;
   } catch {
     return null;
   }
 }
 
-export function requireAuth(req: NextRequest): { valid: boolean; payload?: any; response?: NextResponse } {
+export function requireAuth(req: NextRequest): { valid: boolean; payload?: JwtPayload; response?: NextResponse } {
   const authHeader = req.headers.get('authorization') || '';
   const tokenStr = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
   if (!tokenStr) {
@@ -88,7 +100,7 @@ export function requireAuth(req: NextRequest): { valid: boolean; payload?: any; 
   return { valid: true, payload };
 }
 
-export function requireAdmin(req: NextRequest): { valid: boolean; payload?: any; response?: NextResponse } {
+export function requireAdmin(req: NextRequest): { valid: boolean; payload?: JwtPayload; response?: NextResponse } {
   const auth = requireAuth(req);
   if (!auth.valid) return auth;
   if (auth.payload?.role !== 'admin') {

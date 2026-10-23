@@ -10,22 +10,28 @@ declare global {
 let clientPromise: Promise<MongoClient> | null = null;
 
 export async function connectToDatabase(): Promise<{ client: MongoClient; db: Db }> {
-  const MONGODB_URI = process.env.MONGODB_URI;
-  if (!MONGODB_URI) {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
     throw new Error('Please define the MONGODB_URI environment variable in Vercel dashboard.');
   }
 
   if (!clientPromise) {
     if (process.env.NODE_ENV === 'development') {
       if (!global._mongoClientPromise) {
-        const client = new MongoClient(MONGODB_URI);
-        global._mongoClientPromise = client.connect();
+        const client = new MongoClient(uri);
+        global._mongoClientPromise = client.connect().catch((error: unknown) => {
+          global._mongoClientPromise = undefined;
+          throw error;
+        });
       }
       clientPromise = global._mongoClientPromise;
     } else {
       // In production, always create a new client per cold start
-      const client = new MongoClient(MONGODB_URI);
-      clientPromise = client.connect();
+      const client = new MongoClient(uri);
+      clientPromise = client.connect().catch((error: unknown) => {
+        clientPromise = null;
+        throw error;
+      });
     }
   }
 

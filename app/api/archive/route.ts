@@ -56,14 +56,14 @@ export async function POST(req: NextRequest) {
     }
 
     const filter = category === 'all' ? {} : { type: category };
-    let items = await archivesCollection.find(filter).toArray();
+    let items: Record<string, unknown>[] = await archivesCollection.find(filter).toArray();
 
     // Dynamically fetch and merge user-submitted stories from contributions collection
     if (category === 'all' || category === 'stories') {
       const contributionsCollection = db.collection('contributions');
       const userStories = await contributionsCollection.find({}).sort({ createdAt: -1 }).toArray();
 
-      const mappedUserStories = userStories.map((s: any) => ({
+      const mappedUserStories = userStories.map((s) => ({
         type: 'stories',
         title: s.title,
         period: s.category || 'मौखिक इतिहास',
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
       }));
 
       // Prepend user stories so they appear at the top
-      items = [...mappedUserStories, ...items] as any;
+      items = [...mappedUserStories, ...items];
     }
 
     return send(200, { items });

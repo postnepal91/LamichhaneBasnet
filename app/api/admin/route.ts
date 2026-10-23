@@ -1,7 +1,6 @@
 import { NextRequest } from 'next/server';
 import { send, checkMethod, readBody, requireAdmin, required } from '@/lib/shared';
 import { connectToDatabase } from '@/lib/db';
-import { ObjectId } from 'mongodb';
 import { logAction } from '@/lib/audit';
 
 export async function POST(req: NextRequest) {
@@ -10,6 +9,8 @@ export async function POST(req: NextRequest) {
 
   const auth = requireAdmin(req);
   if (!auth.valid) return auth.response!;
+  const adminEmail = auth.payload?.email;
+  if (!adminEmail) return send(401, { error: 'प्रमाणिकरण आवश्यक छ।' });
 
   try {
     const body = await readBody(req);
@@ -27,7 +28,7 @@ export async function POST(req: NextRequest) {
           db.collection('archives').countDocuments(),
         ]);
         const pendingContributions = await db.collection('contributions').countDocuments({ status: 'pending' });
-        await logAction(auth.payload!.email, 'stats', { users, contacts, contributions, archives, pendingContributions });
+        await logAction(adminEmail, 'stats', { users, contacts, contributions, archives, pendingContributions });
       return send(200, { users, contacts, contributions, archives, pendingContributions });
       }
 
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
           .sort({ createdAt: -1 })
           .limit(100)
           .toArray();
-        await logAction(auth.payload!.email, 'list_users', { count: users.length });
+        await logAction(adminEmail, 'list_users', { count: users.length });
       return send(200, { users });
       }
 
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest) {
         const targetEmail = required(body.email, 'इमेल');
         const role = body.role === 'admin' ? 'admin' : 'member';
         await db.collection('users').updateOne({ email: targetEmail }, { $set: { role } });
-        await logAction(auth.payload!.email, 'set_role', { targetEmail, role });
+        await logAction(adminEmail, 'set_role', { targetEmail, role });
       return send(200, { message: `${targetEmail} को भूमिका ${role} मा परिवर्तन भयो।` });
       }
 
@@ -58,7 +59,7 @@ export async function POST(req: NextRequest) {
           .sort({ createdAt: -1 })
           .limit(100)
           .toArray();
-        await logAction(auth.payload!.email, 'list_contacts', { count: contacts.length });
+        await logAction(adminEmail, 'list_contacts', { count: contacts.length });
       return send(200, { contacts });
       }
 
@@ -70,7 +71,7 @@ export async function POST(req: NextRequest) {
           .sort({ createdAt: -1 })
           .limit(100)
           .toArray();
-        await logAction(auth.payload!.email, 'list_contributions', { count: contributions.length, filter: body.status || null });
+        await logAction(adminEmail, 'list_contributions', { count: contributions.length, filter: body.status || null });
       return send(200, { contributions });
       }
 
@@ -80,18 +81,18 @@ export async function POST(req: NextRequest) {
         const status = body.status === 'approved' ? 'approved' : 'rejected';
         await db.collection('contributions').updateOne(
           { submissionId: contribId },
-          { $set: { status, reviewedBy: auth.payload!.email, reviewedAt: new Date() } }
+          { $set: { status, reviewedBy: adminEmail, reviewedAt: new Date() } }
         );
-        await logAction(auth.payload!.email, 'review_contribution', { contribId, status });
+        await logAction(adminEmail, 'review_contribution', { contribId, status });
       return send(200, { message: `कथाको स्थिति "${status}" मा परिवर्तन भयो।` });
       }
 
       // --- Delete a user ---
       case 'delete_user': {
         const targetEmail = required(body.email, 'इमेल');
-        if (targetEmail === auth.payload!.email) throw new Error('आफ्नै खाता मेटाउन मिल्दैन।');
+        if (targetEmail === adminEmail) throw new Error('आफ्नै खाता मेटाउन मिल्दैन।');
         await db.collection('users').deleteOne({ email: targetEmail });
-        await logAction(auth.payload!.email, 'delete_user', { targetEmail });
+        await logAction(adminEmail, 'delete_user', { targetEmail });
       return send(200, { message: `${targetEmail} मेटाइयो।` });
       }
 
