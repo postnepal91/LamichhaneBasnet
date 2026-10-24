@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server';
 
+const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+const hasGoogleClientId = Boolean(
+  googleClientId && /^\d+-[a-z0-9-]+\.apps\.googleusercontent\.com$/.test(googleClientId),
+);
+
 const HTML = `<!doctype html>
 <html lang="ne">
 <head>
@@ -16,8 +21,7 @@ const HTML = `<!doctype html>
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
 
-  <!-- Google Sign-In SDK -->
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  ${hasGoogleClientId ? '<script src="https://accounts.google.com/gsi/client" async defer></script>' : ''}
 
   <title data-i18n="headTitle">लमिछाने बस्नेत | इतिहास, कुलपूजा र सांस्कृतिक विरासत</title>
   <style>
@@ -247,9 +251,10 @@ const HTML = `<!doctype html>
               <div class="field" id="branchField"><label for="authBranch" data-i18n="labelBranch">कुल शाखा</label><input id="authBranch" name="branch" placeholder="जस्तै: दैलेख शाखा"></div>
               <button class="btn primary" type="submit" data-i18n="btnSubmit">जारी राख्नुहोस्</button>
               
+              ${hasGoogleClientId ? `
               <!-- Official Google Sign-In Button -->
               <div id="g_id_onload"
-                   data-client_id="1012351221764-dummyclientid.apps.googleusercontent.com"
+                   data-client_id="${googleClientId}"
                    data-context="signin"
                    data-ux_mode="popup"
                    data-callback="handleGoogleLogin"
@@ -264,6 +269,7 @@ const HTML = `<!doctype html>
                    data-logo_alignment="left"
                    style="margin-top: 0.75rem; width: 100%;">
               </div>
+              ` : '<p class="status">Google लगइन हाल कन्फिगर गरिएको छैन। इमेल र पासवर्डबाट लगइन गर्न सक्नुहुन्छ।</p>'}
 
               <div class="status" id="authStatus" role="status"></div>
             </form>
@@ -352,7 +358,9 @@ const HTML = `<!doctype html>
         setStatus(status, 'अभिलेख लोड हुँदैछ...');
         const data = await api('/api/archive', {category});
         $('#archiveGrid').innerHTML = data.items.map(item => \`<article class="card archive-item"><h3>\${item.title}</h3><p><strong>\${item.type}</strong> · \${item.period}</p><p>\${item.summary}</p></article>\`).join('');
-        setStatus(status, \`\${data.items.length} अभिलेख भेटिए।\`);
+        setStatus(status, data.source === 'sample'
+          ? \`नमुना अभिलेख देखाइँदैछ (\${data.items.length} वटा)। MongoDB जोड्न .env.local.example हेर्नुहोस्।\`
+          : \`\${data.items.length} अभिलेख भेटिए।\`);
       }catch(err){ setStatus(status, err.message, false); }
     }
     $('#archiveToolbar').addEventListener('click', e => {

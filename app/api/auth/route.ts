@@ -1,9 +1,19 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { send, checkMethod, readBody, required, email, id, token } from '@/lib/shared';
+import { NextRequest } from 'next/server';
+import { send, checkMethod, readBody, required, email, token } from '@/lib/shared';
 import { connectToDatabase } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 import { signAccess, signRefresh, verifyRefresh, verifyAccess } from '@/lib/jwt';
 import { sendEmail } from '@/lib/email';
+
+type AuthUser = {
+  email: string;
+  name: string;
+  role: string;
+  password?: string;
+  branch?: string;
+  authProvider?: string;
+  createdAt?: Date;
+};
 
 export async function POST(req: NextRequest) {
   const methodCheck = checkMethod(req, ['POST']);
@@ -15,17 +25,17 @@ export async function POST(req: NextRequest) {
     const userEmail = email(body.email);
 
     const { db } = await connectToDatabase();
-    const usersCollection = db.collection('users');
+    const usersCollection = db.collection<AuthUser>('users');
 
     // --- Google OAuth placeholder ---
     if (mode === 'google') {
-      const credential = body.credential;
+      const credential = typeof body.credential === 'string' ? body.credential : '';
       let verifiedEmail = '';
       let verifiedName = 'Google User';
 
       if (credential === 'test_mock_token' || (!credential && process.env.ALLOW_MOCK_GOOGLE === 'true')) {
         verifiedEmail = userEmail;
-        verifiedName = body.name || 'Google User';
+        verifiedName = typeof body.name === 'string' ? body.name : 'Google User';
       } else {
         if (!credential) {
           throw new Error('Google OAuth प्रमाणिकरण (Credential) आवश्यक छ।');
@@ -43,7 +53,7 @@ export async function POST(req: NextRequest) {
       }
 
       // Check if user exists, if not create a stub
-      let user: any = await usersCollection.findOne({ email: verifiedEmail });
+      let user: AuthUser | null = await usersCollection.findOne({ email: verifiedEmail });
       if (!user) {
         const newUser = {
           email: verifiedEmail,
@@ -70,7 +80,7 @@ export async function POST(req: NextRequest) {
       throw new Error('पासवर्ड कम्तीमा ६ अक्षरको हुनुपर्छ।');
     }
 
-    let user: any = await usersCollection.findOne({ email: userEmail });
+    let user: AuthUser | null = await usersCollection.findOne({ email: userEmail });
 
     if (mode === 'signup') {
       if (user) throw new Error('यो इमेल पहिले नै दर्ता गरिएको छ।');
@@ -79,7 +89,7 @@ export async function POST(req: NextRequest) {
         email: userEmail,
         password: hashedPassword,
         name: required(body.name, 'नाम'),
-        branch: body.branch || '',
+        branch: typeof body.branch === 'string' ? body.branch : '',
         authProvider: 'local',
         role: 'member',
         emailVerified: false,
