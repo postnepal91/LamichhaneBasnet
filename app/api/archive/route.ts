@@ -11,6 +11,13 @@ const initialItems = [
   { type: 'stories', title: 'विदेशमा बस्ने पुस्ताको पहिचान', period: 'आधुनिक काल', summary: 'बसाइँसराइपछि पनि कुलपूजा र वंश स्मृति जोगाउने अनुभव।' },
 ];
 
+const initialBranches = [
+  { name: 'पश्चिम नेपाल शाखा', region: 'जुम्ला, दैलेख, जाजरकोट, रुकुम, सल्यान', note: 'मष्टो परम्परा र पुराना बसोबाससँग जोडिएको मुख्य स्मृति क्षेत्र।' },
+  { name: 'गोरखा सम्बन्ध', region: 'गोरखा र आसपास', note: 'नेपाल एकीकरण र गोरखाली सैनिक परम्परासँग जोडिएको शाखा।' },
+  { name: 'गण्डकी/मध्य शाखा', region: 'गण्डकी क्षेत्र', note: 'बसाइँसराइ र पारिवारिक विस्तारका मौखिक विवरण भेटिने क्षेत्र।' },
+  { name: 'प्रवासी शाखा', region: 'भारत, खाडी, उत्तर अमेरिका, युरोप, अस्ट्रेलिया', note: 'आधुनिक पुस्ताको पहिचान र डिजिटल अभिलेख निर्माणका लागि खुला समूह।' },
+];
+
 export async function POST(req: NextRequest) {
   const methodCheck = checkMethod(req, ['POST', 'GET']);
   if (!methodCheck.valid) return methodCheck.response!;
@@ -19,6 +26,19 @@ export async function POST(req: NextRequest) {
     const body = await readBody(req);
     const category = body.category || 'all';
     const searchQuery = String(body.search || '').trim();
+
+    if (!process.env.MONGODB_URI) {
+      if (searchQuery) {
+        const query = searchQuery.toLocaleLowerCase();
+        const results = initialBranches.filter((branch) =>
+          `${branch.name} ${branch.region} ${branch.note}`.toLocaleLowerCase().includes(query),
+        );
+        return send(200, { results, source: 'sample' });
+      }
+
+      const items = initialItems.filter((item) => category === 'all' || item.type === category);
+      return send(200, { items, source: 'sample' });
+    }
 
     const { db } = await connectToDatabase();
     const archivesCollection = db.collection('archives');
@@ -33,13 +53,6 @@ export async function POST(req: NextRequest) {
       const branchesCollection = db.collection('branches');
       
       // Seed branches if empty
-      const initialBranches = [
-        { name: 'पश्चिम नेपाल शाखा', region: 'जुम्ला, दैलेख, जाजरकोट, रुकुम, सल्यान', note: 'मष्टो परम्परा र पुराना बसोबाससँग जोडिएको मुख्य स्मृति क्षेत्र।' },
-        { name: 'गोरखा सम्बन्ध', region: 'गोरखा र आसपास', note: 'नेपाल एकीकरण र गोरखाली सैनिक परम्परासँग जोडिएको शाखा।' },
-        { name: 'गण्डकी/मध्य शाखा', region: 'गण्डकी क्षेत्र', note: 'बसाइँसराइ र पारिवारिक विस्तारका मौखिक विवरण भेटिने क्षेत्र।' },
-        { name: 'प्रवासी शाखा', region: 'भारत, खाडी, उत्तर अमेरिका, युरोप, अस्ट्रेलिया', note: 'आधुनिक पुस्ताको पहिचान र डिजिटल अभिलेख निर्माणका लागि खुला समूह।' },
-      ];
-      
       if (await branchesCollection.countDocuments() === 0) {
         await branchesCollection.insertMany(initialBranches);
       }

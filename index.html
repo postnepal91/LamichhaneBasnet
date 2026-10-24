@@ -14,9 +14,6 @@
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
 
-  <!-- Google Sign-In SDK -->
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-
   <title data-i18n="headTitle">लमिछाने बस्नेत | इतिहास, कुलपूजा र सांस्कृतिक विरासत</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap');
@@ -245,23 +242,7 @@
               <div class="field" id="branchField"><label for="authBranch" data-i18n="labelBranch">कुल शाखा</label><input id="authBranch" name="branch" placeholder="जस्तै: दैलेख शाखा"></div>
               <button class="btn primary" type="submit" data-i18n="btnSubmit">जारी राख्नुहोस्</button>
               
-              <!-- Official Google Sign-In Button -->
-              <div id="g_id_onload"
-                   data-client_id="1012351221764-dummyclientid.apps.googleusercontent.com"
-                   data-context="signin"
-                   data-ux_mode="popup"
-                   data-callback="handleGoogleLogin"
-                   data-auto_prompt="false">
-              </div>
-              <div class="g_id_signin"
-                   data-type="standard"
-                   data-shape="rectangular"
-                   data-theme="filled_blue"
-                   data-text="signin_with"
-                   data-size="large"
-                   data-logo_alignment="left"
-                   style="margin-top: 0.75rem; width: 100%;">
-              </div>
+              <p class="status">Google लगइन हाल कन्फिगर गरिएको छैन। इमेल र पासवर्डबाट लगइन गर्न सक्नुहुन्छ।</p>
 
               <div class="status" id="authStatus" role="status"></div>
             </form>
